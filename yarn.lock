@@ -985,13 +985,9 @@ color-convert@^1.3.0, color-convert@^1.9.0:
   dependencies:
     color-name "1.1.1"
 
-color-name@1.1.1:
+color-name@1.1.1, color-name@^1.0.0:
   version "1.1.1"
   resolved "https://registry.yarnpkg.com/color-name/-/color-name-1.1.1.tgz#4b1415304cf50028ea81643643bd82ea05803689"
-
-color-name@^1.0.0:
-  version "1.1.3"
-  resolved "https://registry.yarnpkg.com/color-name/-/color-name-1.1.3.tgz#a7d0558bd89c42f795dd42328f740831ca53bc25"
 
 color-string@^0.3.0:
   version "0.3.0"
@@ -1494,18 +1490,7 @@ escape-string-regexp@^1.0.2, escape-string-regexp@^1.0.5:
   version "1.0.5"
   resolved "https://registry.yarnpkg.com/escape-string-regexp/-/escape-string-regexp-1.0.5.tgz#1b61c0562190a8dff6ae3bb2cf0200ca130b86d4"
 
-escodegen@^1.8.1:
-  version "1.10.0"
-  resolved "https://registry.yarnpkg.com/escodegen/-/escodegen-1.10.0.tgz#f647395de22519fbd0d928ffcf1d17e0dec2603e"
-  dependencies:
-    esprima "^3.1.3"
-    estraverse "^4.2.0"
-    esutils "^2.0.2"
-    optionator "^0.8.1"
-  optionalDependencies:
-    source-map "~0.6.1"
-
-escodegen@~1.9.0:
+escodegen@^1.8.1, escodegen@~1.9.0:
   version "1.9.1"
   resolved "https://registry.yarnpkg.com/escodegen/-/escodegen-1.9.1.tgz#dbae17ef96c8e4bedb1356f4504fa4cc2f7cb7e2"
   dependencies:
@@ -1657,10 +1642,6 @@ esutils@^2.0.2:
 etag@~1.8.1:
   version "1.8.1"
   resolved "https://registry.yarnpkg.com/etag/-/etag-1.8.1.tgz#41ae2eeb65efa62268aebfea83ac7d79299b0887"
-
-eventemitter3@^3.1.0:
-  version "3.1.0"
-  resolved "https://registry.yarnpkg.com/eventemitter3/-/eventemitter3-3.1.0.tgz#090b4d6cdbd645ed10bf750d4b5407942d7ba163"
 
 events@^1.0.0:
   version "1.1.1"
@@ -2876,6 +2857,10 @@ pako@~1.0.5:
   version "1.0.6"
   resolved "https://registry.yarnpkg.com/pako/-/pako-1.0.6.tgz#0101211baa70c4bca4a0f63f2206e97b7dfaf258"
 
+paper@^0.11.8:
+  version "0.11.8"
+  resolved "https://registry.yarnpkg.com/paper/-/paper-0.11.8.tgz#c395269e23e3bb456c9f9e88a2f87f4421bfef23"
+
 parcel-bundler@^1.9.0:
   version "1.9.0"
   resolved "https://registry.yarnpkg.com/parcel-bundler/-/parcel-bundler-1.9.0.tgz#be0fe5937c8cf423c06bbddfe64830ac77cd4687"
@@ -3006,12 +2991,6 @@ pbkdf2@^3.0.3:
     ripemd160 "^2.0.1"
     safe-buffer "^5.0.1"
     sha.js "^2.4.8"
-
-phaser@^3.10.1:
-  version "3.10.1"
-  resolved "https://registry.yarnpkg.com/phaser/-/phaser-3.10.1.tgz#a34099bba3f16476def83b34e8cc55fcd52083f0"
-  dependencies:
-    eventemitter3 "^3.1.0"
 
 physical-cpu-count@^2.0.0:
   version "2.0.0"
@@ -3831,11 +3810,7 @@ static-module@^2.2.0:
     static-eval "^2.0.0"
     through2 "~2.0.3"
 
-"statuses@>= 1.4.0 < 2":
-  version "1.5.0"
-  resolved "https://registry.yarnpkg.com/statuses/-/statuses-1.5.0.tgz#161c7dac177659fd9811f43771fa99381478628c"
-
-statuses@~1.4.0:
+"statuses@>= 1.4.0 < 2", statuses@~1.4.0:
   version "1.4.0"
   resolved "https://registry.yarnpkg.com/statuses/-/statuses-1.4.0.tgz#bb73d446da2796106efcc1b601a253d6c46bd087"
 
