@@ -3,7 +3,8 @@ module.exports = {
   extends: "airbnb-base",
   rules: {
     "linebreak-style": ["error", "windows"],
-    "linebreak-style": ["error", "unix"]
+    "linebreak-style": ["error", "unix"],
+    "no-bitwise": 0
   },
   plugins: ["import"]
 };
