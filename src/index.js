@@ -11,9 +11,9 @@ class HyperRect {
     this.origin.fillColor = color;
     this.worldLength = worldLength;
     this.depth = depth;
-    this.depthDigit = (2 ** (depth - 1));
+    this.depthDigit = 2 ** depth;
     this.unitLength = worldLength / this.depthDigit;
-    this.mortonOrder = null;
+    this.mortonOrder = this.computeMortonOrder();
   }
 
   get x() {
@@ -22,7 +22,7 @@ class HyperRect {
 
   set x(x) {
     this.origin.position.x = x;
-    this.computeRectMortonOrder();
+    this.mortonOrder = this.computeMortonOrder();
   }
 
   get y() {
@@ -31,7 +31,7 @@ class HyperRect {
 
   set y(y) {
     this.origin.position.y = y;
-    this.computeRectMortonOrder();
+    this.mortonOrder = this.computeMortonOrder();
   }
 
   intersects(hyperRect) {
@@ -42,7 +42,7 @@ class HyperRect {
     return false;
   }
 
-  computeRectMortonOrder() {
+  computeMortonOrder() {
     /*
     矩形のモートン順序は、左上および右下のポイントのモートン順序から計算する
     モートン順序はルート空間以降の全空間の座標を含むので、矩形の所属空間はXORをとったものを最上位桁から2ビットずつ見て、
@@ -55,14 +55,20 @@ class HyperRect {
     const topLeftOrder = this.computePointMortonOrder(topLeft);
     const bottomRightOrder = this.computePointMortonOrder(bottomRight);
 
+    if (topLeftOrder === -1 || bottomRightOrder === -1) {
+      return -1;
+    }
+
     const pointXor = topLeftOrder ^ bottomRightOrder;
 
     let digit = (this.depth - 1);
     while (!((pointXor >> (digit * 2)) & 0b11) && digit) {
       digit -= 1;
     }
-    const rectSpaceLevel = (this.depth - 1) - digit;
-    const shiftNum = (this.depth - rectSpaceLevel) * 2;
+    const rectSpaceLevel = (this.depth) - digit;
+    const shiftNum = digit * 2;
+
+    console.log(topLeftOrder, bottomRightOrder, topLeftOrder >> shiftNum);
 
     return topLeftOrder >> shiftNum;
   }
@@ -78,6 +84,10 @@ class HyperRect {
          101101 = 45
     */
 
+    if (point.x < 1 || point.x > this.worldLength || point.y < 1 || point.y > this.worldLength) {
+      return -1;
+    }
+
     const x = Math.floor(point.x / this.unitLength);
     const y = Math.floor(point.y / this.unitLength);
 
@@ -87,16 +97,19 @@ class HyperRect {
       tmpOrder += ((y >> digit) & 0b1) ? (0b1 << ((digit * 2) + 1)) : 0;
     }
 
-    return tmpOrder;
+    // TODO: ビットをそろえる
+    const max = (4 ** this.depth) - 1;
+    return (tmpOrder > max) ? max & tmpOrder : tmpOrder;
   }
 }
 
-const rect = new HyperRect(new paper.Point(10, 10), new paper.Size(20, 20), paper.view.size.width, 4, 'green');
-const rect2 = new HyperRect(new paper.Point(100, 10), new paper.Size(150, 150), paper.view.size.width, 4, 'red');
+const rect = new HyperRect(new paper.Point(10, 10), new paper.Size(20, 20), paper.view.size.width, 3, 'green');
+const rect2 = new HyperRect(new paper.Point(100, 10), new paper.Size(150, 150), paper.view.size.width, 3, 'red');
 
 paper.view.onFrame = () => {
   rect.x += 0.5;
   if (rect.intersects(rect2)) {
     console.log('oh hit');
+    // console.log(rect.mortonOrder);
   }
 };
