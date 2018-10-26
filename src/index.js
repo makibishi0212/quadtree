@@ -1,4 +1,5 @@
 import paper from 'paper';
+import isEqual from 'deep-equal';
 
 const canvas = document.getElementById('myCanvas');
 
@@ -65,10 +66,10 @@ class HyperRect {
     while (!((pointXor >> (digit * 2)) & 0b11) && digit) {
       digit -= 1;
     }
-    const rectSpaceLevel = (this.depth) - digit;
+    // const rectSpaceLevel = (this.depth) - digit;
     const shiftNum = digit * 2;
 
-    console.log(topLeftOrder, bottomRightOrder, topLeftOrder >> shiftNum);
+    // console.log(topLeftOrder, bottomRightOrder, topLeftOrder >> shiftNum);
 
     return topLeftOrder >> shiftNum;
   }
@@ -103,13 +104,71 @@ class HyperRect {
   }
 }
 
-const rect = new HyperRect(new paper.Point(10, 10), new paper.Size(20, 20), paper.view.size.width, 3, 'green');
-const rect2 = new HyperRect(new paper.Point(100, 10), new paper.Size(150, 150), paper.view.size.width, 3, 'red');
+class ObjCell {
+  constructor(obj, prev) {
+    this.obj = obj;
+    this.prev = prev;
+    this.next = null;
+  }
+}
+
+class ObjList {
+  constructor() {
+    console.log('this is obj list');
+    this.start = null;
+    this.end = null;
+  }
+
+  add(obj) {
+    if (this.end) {
+      const newCell = new ObjCell(obj, this.end);
+      this.end.next = newCell;
+      this.end = newCell;
+    } else {
+      this.start = new ObjCell(obj, null);
+      this.end = this.start;
+    }
+  }
+
+  delete(obj) {
+    let targetCell = this.start;
+    while (targetCell) {
+      if (isEqual(obj, targetCell.obj)) {
+        targetCell.prev = targetCell.next;
+        targetCell = null;
+      } else {
+        targetCell = targetCell.next;
+      }
+    }
+  }
+}
+
+class ObjTree {
+  constructor(depth) {
+    console.log('this is obj tree');
+    const geometricseries = ((4 ** (depth + 1)) - 1) / 3;
+    this.treeArray = new Array(geometricseries).fill(null);
+  }
+
+  add(mortonOrder, obj) {
+    // オブジェクトをツリーに登録
+  }
+
+  move(prevOrder, newOrder, obj) {
+    // オブジェクトのアドレスを移動
+  }
+}
+
+const depth = 3;
+
+const objTree = new ObjTree(depth);
+
+const rect = new HyperRect(new paper.Point(10, 10), new paper.Size(20, 20), paper.view.size.width, depth, 'green');
+const rect2 = new HyperRect(new paper.Point(100, 10), new paper.Size(150, 150), paper.view.size.width, depth, 'red');
 
 paper.view.onFrame = () => {
   rect.x += 0.5;
   if (rect.intersects(rect2)) {
     console.log('oh hit');
-    // console.log(rect.mortonOrder);
   }
 };
