@@ -1,5 +1,5 @@
 import paper from 'paper';
-import isEqual from 'deep-equal';
+import isEqual from 'fast-deep-equal';
 
 class HyperRect {
   constructor(topLeft, size, worldLength, maxDepth, color = 'red') {
