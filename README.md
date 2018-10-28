@@ -1,3 +1,3 @@
-# Quadtree collision detection powered by Phaser 3
+# Quadtree collision detection powered by Paperjs
 
 write later

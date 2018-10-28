@@ -4,7 +4,8 @@ module.exports = {
   rules: {
     "linebreak-style": ["error", "windows"],
     "linebreak-style": ["error", "unix"],
-    "no-bitwise": 0
+    "no-bitwise": 0,
+    "no-underscore-dangle": ["error", { "allowAfterThis": true }]
   },
   plugins: ["import"]
 };

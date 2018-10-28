@@ -1,20 +1,20 @@
 import paper from 'paper';
 import isEqual from 'deep-equal';
 
-const canvas = document.getElementById('myCanvas');
-
-paper.install(window);
-paper.setup(canvas);
-
 class HyperRect {
-  constructor(topLeft, size, worldLength, depth, color = 'red') {
+  constructor(topLeft, size, worldLength, maxDepth, color = 'red') {
     this.origin = new paper.Path.Rectangle(topLeft, size);
     this.origin.fillColor = color;
     this.worldLength = worldLength;
-    this.depth = depth;
-    this.depthDigit = 2 ** depth;
+    this.maxDepth = maxDepth;
+    this.depthDigit = 2 ** this.maxDepth;
     this.unitLength = worldLength / this.depthDigit;
-    this.mortonOrder = this.computeMortonOrder();
+    this.prevAddress = null;
+    this.address = null;
+    this.computeMortonOrder();
+
+    // このフレームでオブジェクトのorderが変化したかどうか
+    this.isMove = false;
   }
 
   get x() {
@@ -23,7 +23,6 @@ class HyperRect {
 
   set x(x) {
     this.origin.position.x = x;
-    this.mortonOrder = this.computeMortonOrder();
   }
 
   get y() {
@@ -32,7 +31,15 @@ class HyperRect {
 
   set y(y) {
     this.origin.position.y = y;
-    this.mortonOrder = this.computeMortonOrder();
+  }
+
+  update() {
+    // このメソッドを親から毎フレーム実行するようにする
+    this.isMove = false;
+
+    this.prevAddress = this.address;
+    this.computeMortonOrder();
+    if (!isEqual(this.prevAddress, this.address)) this.isMove = true;
   }
 
   intersects(hyperRect) {
@@ -57,21 +64,23 @@ class HyperRect {
     const bottomRightOrder = this.computePointMortonOrder(bottomRight);
 
     if (topLeftOrder === -1 || bottomRightOrder === -1) {
-      return -1;
+      this.address = null;
     }
 
     const pointXor = topLeftOrder ^ bottomRightOrder;
 
-    let digit = (this.depth - 1);
+    let digit = (this.maxDepth - 1);
     while (!((pointXor >> (digit * 2)) & 0b11) && digit) {
       digit -= 1;
     }
-    // const rectSpaceLevel = (this.depth) - digit;
+
+    const rectSpaceLevel = (this.maxDepth) - digit;
     const shiftNum = digit * 2;
 
-    // console.log(topLeftOrder, bottomRightOrder, topLeftOrder >> shiftNum);
-
-    return topLeftOrder >> shiftNum;
+    this.address = {
+      order: topLeftOrder >> shiftNum,
+      depth: rectSpaceLevel,
+    };
   }
 
   computePointMortonOrder(point) {
@@ -93,13 +102,13 @@ class HyperRect {
     const y = Math.floor(point.y / this.unitLength);
 
     let tmpOrder = 0;
-    for (let digit = (this.depth - 1); digit >= 0; digit -= 1) {
+    for (let digit = (this.maxDepth - 1); digit >= 0; digit -= 1) {
       tmpOrder += ((x >> digit) & 0b1) ? (0b1 << (digit * 2)) : 0;
       tmpOrder += ((y >> digit) & 0b1) ? (0b1 << ((digit * 2) + 1)) : 0;
     }
 
     // TODO: ビットをそろえる
-    const max = (4 ** this.depth) - 1;
+    const max = (4 ** this.maxDepth) - 1;
     return (tmpOrder > max) ? max & tmpOrder : tmpOrder;
   }
 }
@@ -114,12 +123,12 @@ class ObjCell {
 
 class ObjList {
   constructor() {
-    console.log('this is obj list');
     this.start = null;
     this.end = null;
+    this.length = 0;
   }
 
-  add(obj) {
+  addObj(obj) {
     if (this.end) {
       const newCell = new ObjCell(obj, this.end);
       this.end.next = newCell;
@@ -128,14 +137,22 @@ class ObjList {
       this.start = new ObjCell(obj, null);
       this.end = this.start;
     }
+
+    this.length += 1;
   }
 
-  delete(obj) {
+  deleteObj(obj) {
     let targetCell = this.start;
     while (targetCell) {
-      if (isEqual(obj, targetCell.obj)) {
+      if (obj === targetCell.obj) {
         targetCell.prev = targetCell.next;
         targetCell = null;
+        this.length -= 1;
+
+        if (this.length === 0) {
+          this.start = null;
+          this.end = null;
+        }
       } else {
         targetCell = targetCell.next;
       }
@@ -144,29 +161,80 @@ class ObjList {
 }
 
 class ObjTree {
-  constructor(depth) {
-    console.log('this is obj tree');
-    const geometricseries = ((4 ** (depth + 1)) - 1) / 3;
+  constructor(maxDepth) {
+    const geometricseries = ((4 ** (maxDepth + 1)) - 1) / 3;
     this.treeArray = new Array(geometricseries).fill(null);
+    for (let i = 0; i < geometricseries; i += 1) this.treeArray[i] = new ObjList();
+    this.maxDepth = maxDepth;
   }
 
-  add(mortonOrder, obj) {
+  add(address, obj) {
     // オブジェクトをツリーに登録
+    if (address) {
+      const arrayIndex = (((4 ** address.depth) - 1) / 3) + address.order;
+      this.treeArray[arrayIndex].addObj(obj);
+    }
   }
 
-  move(prevOrder, newOrder, obj) {
+  delete(address, obj) {
+    // オブジェクトをツリーから削除
+    if (address) {
+      const arrayIndex = (((4 ** address.depth) - 1) / 3) + address.order;
+      this.treeArray[arrayIndex].deleteObj(obj);
+    }
+  }
+
+  move(obj) {
     // オブジェクトのアドレスを移動
+    this.delete(obj.prevAddress, obj);
+    this.add(obj.address, obj);
   }
 }
 
-const depth = 3;
+class World {
+  constructor(canvasElement, maxDepth) {
+    const canvas = canvasElement;
 
-const objTree = new ObjTree(depth);
+    paper.setup(canvas);
 
-const rect = new HyperRect(new paper.Point(10, 10), new paper.Size(20, 20), paper.view.size.width, depth, 'green');
-const rect2 = new HyperRect(new paper.Point(100, 10), new paper.Size(150, 150), paper.view.size.width, depth, 'red');
+    this.objTree = new ObjTree(maxDepth);
+    this.objects = [];
 
-paper.view.onFrame = () => {
+    this.update = () => {
+
+    };
+
+    paper.view.onFrame = () => {
+      this.update();
+
+      this.objects.forEach((obj) => {
+        obj.update();
+        if (obj.isMove) {
+          this.objTree.move(obj);
+        }
+      });
+    };
+  }
+
+  add(obj) {
+    this.objects.push(obj);
+    this.objTree.add(obj.address, obj);
+  }
+}
+
+const maxDepth = 3;
+
+paper.install(window);
+
+const world = new World(document.getElementById('myCanvas'), maxDepth);
+
+const rect = new HyperRect(new paper.Point(10, 10), new paper.Size(20, 20), paper.view.size.width, maxDepth, 'green');
+const rect2 = new HyperRect(new paper.Point(100, 10), new paper.Size(150, 150), paper.view.size.width, maxDepth, 'red');
+
+world.add(rect);
+world.add(rect2);
+
+world.update = () => {
   rect.x += 0.5;
   if (rect.intersects(rect2)) {
     console.log('oh hit');
