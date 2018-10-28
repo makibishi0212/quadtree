@@ -11,6 +11,8 @@ class HyperRect {
     this.unitLength = worldLength / this.depthDigit;
     this.prevAddress = null;
     this.address = null;
+    this.vx = 0;
+    this.vy = 0;
     this.computeMortonOrder();
 
     // このフレームでオブジェクトのorderが変化したかどうか
@@ -33,9 +35,17 @@ class HyperRect {
     this.origin.position.y = y;
   }
 
+  setSpeed(vX, vY) {
+    this.vx = vX;
+    this.vy = vY;
+  }
+
   update() {
     // このメソッドを親から毎フレーム実行するようにする
     this.isMove = false;
+
+    this.x += (this.vx / 30);
+    this.y += (this.vy / 30);
 
     this.prevAddress = this.address;
     this.computeMortonOrder();
@@ -197,6 +207,9 @@ class World {
 
     paper.setup(canvas);
 
+    this.width = paper.view.size.width;
+    this.height = paper.view.size.height;
+
     this.objTree = new ObjTree(maxDepth);
     this.objects = [];
 
@@ -222,20 +235,22 @@ class World {
   }
 }
 
-const maxDepth = 3;
-
 paper.install(window);
+
+const maxDepth = 3;
 
 const world = new World(document.getElementById('myCanvas'), maxDepth);
 
-const rect = new HyperRect(new paper.Point(10, 10), new paper.Size(20, 20), paper.view.size.width, maxDepth, 'green');
-const rect2 = new HyperRect(new paper.Point(100, 10), new paper.Size(150, 150), paper.view.size.width, maxDepth, 'red');
+const rect = new HyperRect(new paper.Point(10, 10), new paper.Size(20, 20), world.width, maxDepth, 'green');
+const rect2 = new HyperRect(new paper.Point(200, 100), new paper.Size(120, 120), world.width, maxDepth, 'red');
+
+rect.setSpeed(20, 32);
+rect2.setSpeed(-20, 0);
 
 world.add(rect);
 world.add(rect2);
 
 world.update = () => {
-  rect.x += 0.5;
   if (rect.intersects(rect2)) {
     console.log('oh hit');
   }
