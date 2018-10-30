@@ -15,6 +15,10 @@ class HyperRect {
     this.vy = 0;
     this.computeMortonOrder();
 
+    this.update = () => {
+
+    };
+
     // このフレームでオブジェクトのorderが変化したかどうか
     this.isMove = false;
   }
@@ -35,13 +39,23 @@ class HyperRect {
     this.origin.position.y = y;
   }
 
+  get color() {
+    return this.origin.fillColor;
+  }
+
+  set color(color) {
+    this.origin.fillColor = color;
+  }
+
   setSpeed(vX, vY) {
     this.vx = vX;
     this.vy = vY;
   }
 
-  update() {
+  onupdate() {
     // このメソッドを親から毎フレーム実行するようにする
+    this.update();
+
     this.isMove = false;
 
     this.x += (this.vx / 30);
@@ -50,9 +64,14 @@ class HyperRect {
     this.prevAddress = this.address;
     this.computeMortonOrder();
     if (!isEqual(this.prevAddress, this.address)) this.isMove = true;
+    if (!this.address) {
+      if (this.vx && this.x > 700) this.x = -60;
+      if (this.vy && this.y > 700) this.y = -60;
+    }
   }
 
   intersects(hyperRect) {
+    // 衝突を判定する関数
     if (this.origin.bounds.intersects(hyperRect.origin.bounds)) {
       return true;
     }
@@ -75,6 +94,7 @@ class HyperRect {
 
     if (topLeftOrder === -1 || bottomRightOrder === -1) {
       this.address = null;
+      return;
     }
 
     const pointXor = topLeftOrder ^ bottomRightOrder;
@@ -117,7 +137,6 @@ class HyperRect {
       tmpOrder += ((y >> digit) & 0b1) ? (0b1 << ((digit * 2) + 1)) : 0;
     }
 
-    // TODO: ビットをそろえる
     const max = (4 ** this.maxDepth) - 1;
     return (tmpOrder > max) ? max & tmpOrder : tmpOrder;
   }
@@ -194,10 +213,87 @@ class ObjTree {
     }
   }
 
-  move(obj) {
+  move(prevAddress, address, obj) {
     // オブジェクトのアドレスを移動
-    this.delete(obj.prevAddress, obj);
-    this.add(obj.address, obj);
+    this.delete(prevAddress, obj);
+    this.add(address, obj);
+  }
+
+  computeObjCollide(obj, collideDetectFunc) {
+    // そのオブジェクトが他オブジェクトと衝突しているかどうか判定する
+    // この実装では他の任意のオブジェクトと衝突しているかどうかのみ計算する
+    if (!obj.address) {
+      return false;
+    }
+
+    // オーダーと深さからインデックスを計算する関数
+    const calcIndex = (order, depth) => (((4 ** depth) - 1) / 3) + order;
+
+    let isCollide = false;
+
+    // 自身よりも上位の空間と自身の空間に対する検索
+    for (let depth = 0; depth <= obj.address.depth; depth += 1) {
+      const spaceOrder = obj.address.order >> ((obj.address.depth - depth) * 2);
+      const spaceIndex = calcIndex(spaceOrder, depth);
+
+      // console.log(obj.address.depth + ':' + obj.address.order, spaceOrder);
+
+      let compareCell = this.treeArray[spaceIndex] ? this.treeArray[spaceIndex].start : null;
+
+      // 対象空間のオブジェクトとの衝突判定
+      while (compareCell) {
+        if (obj !== compareCell.obj && collideDetectFunc(obj, compareCell.obj)) {
+          isCollide = true;
+          compareCell = null;
+        } else {
+          compareCell = compareCell.next;
+        }
+      }
+
+      if (isCollide) break;
+    }
+
+    // 自身よりも下位の空間に対する検索
+    // (0011 で 001100 001101 001110 001111 00110000)
+    const spaceOrder = obj.address.order;
+    const spaceDepth = obj.address.depth;
+
+    // 自身の空間からさらにもぐる深さ
+    let subDepth = 1;
+
+    let tmpOrder = spaceOrder;
+
+    while (spaceDepth + subDepth <= this.maxDepth) {
+      // その深さでの空間数
+      const spaceNum = 4 ** subDepth;
+
+      for (let i = 0; i < spaceNum; i += 1) {
+        tmpOrder = (spaceOrder << (subDepth * 2)) + i;
+        // console.log(spaceDepth + ':' + spaceOrder, tmpOrder);
+
+        const tmpIndex = calcIndex(tmpOrder, spaceDepth + subDepth);
+
+        let compareCell = this.treeArray[tmpIndex] ? this.treeArray[tmpIndex].start : null;
+
+        // 対象空間のオブジェクトとの衝突判定
+        while (compareCell) {
+          if (obj !== compareCell.obj && collideDetectFunc(obj, compareCell.obj)) {
+            isCollide = true;
+            compareCell = null;
+          } else {
+            compareCell = compareCell.next;
+          }
+        }
+
+        if (isCollide) break;
+      }
+
+      if (isCollide) break;
+
+      subDepth += 1;
+    }
+
+    return isCollide;
   }
 }
 
@@ -213,25 +309,43 @@ class World {
     this.objTree = new ObjTree(maxDepth);
     this.objects = [];
 
-    this.update = () => {
+    // オブジェクトが他のオブジェクトと衝突しているかの判定結果を格納する
+    this.collideArray = [];
+
+    this.onupdate = () => {
 
     };
 
     paper.view.onFrame = () => {
-      this.update();
+      this.onupdate();
 
-      this.objects.forEach((obj) => {
-        obj.update();
-        if (obj.isMove) {
-          this.objTree.move(obj);
+      const objLength = this.objects.length;
+      for (let i = 0; i < objLength; i += 1) {
+        this.objects[i].onupdate();
+        if (this.objects[i].isMove) {
+          this.objTree.move(this.objects[i].prevAddress, this.objects[i].address, this.objects[i]);
         }
-      });
+      }
+      for (let i = 0; i < objLength; i += 1) {
+        this.computeObjCollide(i);
+        if (this.collideArray[i]) {
+          this.objects[i].color = '#f04283';
+        } else {
+          this.objects[i].color = '#42f083';
+        }
+      }
+
     };
   }
 
   add(obj) {
     this.objects.push(obj);
+    this.collideArray.push(false);
     this.objTree.add(obj.address, obj);
+  }
+
+  computeObjCollide(objIndex) {
+    this.collideArray[objIndex] = this.objTree.computeObjCollide(this.objects[objIndex], (obj1, obj2) => obj1.intersects(obj2));
   }
 }
 
@@ -241,17 +355,34 @@ const maxDepth = 3;
 
 const world = new World(document.getElementById('myCanvas'), maxDepth);
 
-const rect = new HyperRect(new paper.Point(10, 10), new paper.Size(20, 20), world.width, maxDepth, 'green');
-const rect2 = new HyperRect(new paper.Point(200, 100), new paper.Size(120, 120), world.width, maxDepth, 'red');
+const verticalNum = 40;
+const verticalRects = new Array(verticalNum);
+for (let i = 0; i < verticalNum; i += 1) {
+  const initX = Math.round((world.width - 40) * Math.random()) + 20;
+  const vY = Math.round(75 * Math.random()) + 25;
+  const size = Math.round(30 * Math.random()) + 5;
+  verticalRects[i] = new HyperRect(new paper.Point(initX, -50), new paper.Size(size, size), world.width, maxDepth, '#42f083');
+  verticalRects[i].setSpeed(0, vY);
 
-rect.setSpeed(20, 32);
-rect2.setSpeed(-20, 0);
+  world.add(verticalRects[i]);
+}
 
-world.add(rect);
-world.add(rect2);
+const horizontalNum = 40;
+const horizontalRects = new Array(horizontalNum);
+for (let i = 0; i < horizontalNum; i += 1) {
+  const initY = Math.round((world.width - 40) * Math.random()) + 20;
+  const vX = Math.round(75 * Math.random()) + 25;
+  const size = Math.round(30 * Math.random()) + 5;
+  horizontalRects[i] = new HyperRect(new paper.Point(-50, initY), new paper.Size(size, size), world.width, maxDepth, '#42f083');
+  horizontalRects[i].setSpeed(vX, 0);
 
-world.update = () => {
+  world.add(horizontalRects[i]);
+}
+
+world.onupdate = () => {
+  /*
   if (rect.intersects(rect2)) {
     console.log('oh hit');
   }
+  */
 };
