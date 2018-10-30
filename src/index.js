@@ -334,7 +334,6 @@ class World {
           this.objects[i].color = '#42f083';
         }
       }
-
     };
   }
 
